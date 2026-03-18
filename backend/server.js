@@ -10,7 +10,7 @@ app.use(express.json());
 // Restrict CORS to your GitHub Pages origin in production.
 // Replace the origin below with your actual GitHub Pages URL once deployed.
 const ALLOWED_ORIGINS = [
-  'https://YOUR_GITHUB_USERNAME.github.io', // <-- replace with your GitHub Pages URL
+  'https://davexinoh.github.io/MantleMind/
   'http://localhost:5500',                  // local dev (Live Server)
   'http://127.0.0.1:5500',
 ];
