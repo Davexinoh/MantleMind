@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MantleMind — AI DeFi Co-Pilot on Mantle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3oD+sCoJrzXJ+yKqtkPsA/asf+0smlOnzUD5tG5R0Or69nlsEGGN1g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <style>
+    :root {
+      --black:   #0a0a0a;
+      --ink:     #111111;
+      --surface: #161616;
+      --panel:   #1c1c1c;
+      --border:  #2a2a2a;
+      --muted:   #888888;
+      --text:    #f0f0f0;
+      --white:   #ffffff;
+      --green:   #00d395;
+      --green-dim: rgba(0,211,149,0.12);
+      --red:     #ff4d4d;
+      --amber:   #ffaa00;
+      --mono:    'DM Mono', monospace;
+      --sans:    'Inter', sans-serif;
+      --display: 'Syne', sans-serif;
+      --radius:  6px;
+      --t:       0.18s ease;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: var(--black); color: var(--text); }
+    body { font-family: var(--sans); font-size: 14px; line-height: 1.6; }
+    button { cursor: pointer; border: none; background: none; font: inherit; color: inherit; }
+    input, textarea { font: inherit; color: inherit; }
+    a { color: var(--green); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* APP */
+    #app { display: flex; flex-direction: column; height: 100vh; }
+
+    /* TOPBAR */
+    #topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 56px; padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--ink); flex-shrink: 0; z-index: 100;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-icon {
+      width: 28px; height: 28px; background: var(--green);
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    }
+    .brand-icon svg { width: 16px; height: 16px; }
+    .brand-name { font-family: var(--display); font-size: 17px; font-weight: 800; letter-spacing: -0.3px; color: var(--white); }
+    .brand-tag {
+      font-family: var(--mono); font-size: 10px; color: var(--green);
+      background: var(--green-dim); padding: 2px 8px; border-radius: 4px;
+      border: 1px solid rgba(0,211,149,0.2); letter-spacing: 0.05em;
+    }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .btn-outline {
+      padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 13px; font-weight: 500; color: var(--text); background: transparent;
+      transition: all var(--t);
+    }
+    .btn-outline:hover { border-color: var(--green); color: var(--green); }
+    .btn-green {
+      padding: 7px 16px; border: 1px solid var(--green); border-radius: var(--radius);
+      font-size: 13px; font-weight: 600; color: var(--black); background: var(--green);
+      transition: all var(--t);
+    }
+    .btn-green:hover { background: #00f0a8; border-color: #00f0a8; }
+    .btn-mm {
+      padding: 7px 12px; border: 1px solid #f6851b; border-radius: var(--radius);
+      font-size: 13px; font-weight: 600; color: #f6851b;
+      background: rgba(246,133,27,0.1); display: flex; align-items: center; gap: 6px;
+      transition: all var(--t);
+    }
+    .btn-mm:hover { background: rgba(246,133,27,0.2); }
+    #wallet-display {
+      font-family: var(--mono); font-size: 12px; color: var(--green);
+      background: var(--green-dim); border: 1px solid rgba(0,211,149,0.2);
+      padding: 6px 12px; border-radius: var(--radius);
+      max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      cursor: pointer;
+    }
+    #wallet-display:hover { background: rgba(0,211,149,0.2); }
+
+    /* MAIN */
+    #main { display: flex; flex: 1; overflow: hidden; }
+
+    /* CHAT */
+    #chat-panel {
+      display: flex; flex-direction: column; width: 52%;
+      border-right: 1px solid var(--border); background: var(--ink);
+    }
+    #chat-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .panel-title {
+      font-family: var(--display); font-size: 12px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+    }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+      box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    #messages {
+      flex: 1; overflow-y: auto; padding: 20px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .msg { display: flex; flex-direction: column; gap: 4px; animation: fadeUp 0.25s ease; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .msg-role {
+      font-family: var(--mono); font-size: 10px; font-weight: 500;
+      letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    .msg.user .msg-role { color: var(--muted); }
+    .msg.assistant .msg-role { color: var(--green); }
+    .msg-bubble {
+      padding: 12px 14px; border-radius: var(--radius);
+      font-size: 13.5px; line-height: 1.65; max-width: 92%;
+    }
+    .msg.user .msg-bubble {
+      background: var(--surface); border: 1px solid var(--border);
+      align-self: flex-end;
+    }
+    .msg.assistant .msg-bubble {
+      background: var(--panel); border: 1px solid var(--border);
+      border-left: 2px solid var(--green); align-self: flex-start;
+    }
+    .msg.assistant .msg-bubble strong { color: var(--green); }
+    .msg.user { align-items: flex-end; }
+    .msg.assistant { align-items: flex-start; }
+
+    /* STRATEGY CARDS */
+    .strategy-cards {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
+      align-self: flex-start; max-width: 92%;
+    }
+    .strategy-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 12px;
+      min-width: 148px; max-width: 175px;
+      transition: border-color var(--t); animation: fadeUp 0.3s ease;
+    }
+    .strategy-card:hover { border-color: var(--green); }
+    .sc-name { font-size: 12px; font-weight: 600; color: var(--white); margin-bottom: 2px; }
+    .sc-apy { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--green); }
+    .sc-risk { font-size: 10px; font-family: var(--mono); color: var(--muted); margin: 3px 0; }
+    .sc-action {
+      display: block; margin-top: 7px; padding: 5px 0; text-align: center;
+      background: var(--green-dim); color: var(--green);
+      border: 1px solid rgba(0,211,149,0.2); border-radius: 4px;
+      font-size: 11px; font-family: var(--mono); font-weight: 500;
+      text-decoration: none; transition: background var(--t);
+    }
+    .sc-action:hover { background: rgba(0,211,149,0.2); text-decoration: none; }
+
+    /* SHARE BUTTON */
+    .msg-actions { display: flex; gap: 8px; margin-top: 6px; align-self: flex-start; }
+    .share-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border: 1px solid var(--border); border-radius: 20px;
+      font-size: 11px; font-family: var(--mono); color: var(--muted);
+      transition: all var(--t);
+    }
+    .share-btn:hover { border-color: #1d9bf0; color: #1d9bf0; }
+    .share-btn svg { width: 11px; height: 11px; }
+
+    /* TYPING */
+    .typing-indicator { display: flex; gap: 5px; padding: 4px 0; }
+    .typing-indicator span {
+      width: 7px; height: 7px; background: var(--green);
+      border-radius: 50%; opacity: 0.2; animation: blink 1.2s infinite;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,100%{opacity:0.2} 50%{opacity:1} }
+
+    /* SUGGESTIONS */
+    #suggestions {
+      padding: 0 20px 12px; display: flex;
+      flex-wrap: wrap; gap: 7px; flex-shrink: 0;
+    }
+    .suggestion-chip {
+      padding: 5px 11px; border: 1px solid var(--border);
+      border-radius: 20px; font-size: 12px; color: var(--muted);
+      cursor: pointer; transition: all var(--t); white-space: nowrap;
+    }
+    .suggestion-chip:hover { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+    /* INPUT */
+    #chat-input-area {
+      padding: 14px 20px; border-top: 1px solid var(--border);
+      display: flex; gap: 10px; flex-shrink: 0; background: var(--ink);
+    }
+    #chat-input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 14px; font-size: 14px;
+      color: var(--text); resize: none; height: 44px; max-height: 120px;
+      transition: border-color var(--t); outline: none; overflow-y: auto;
+    }
+    #chat-input:focus { border-color: var(--green); }
+    #chat-input::placeholder { color: var(--muted); }
+    #send-btn {
+      width: 44px; height: 44px; background: var(--green);
+      border-radius: var(--radius); display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0; transition: background var(--t);
+    }
+    #send-btn:hover { background: #00f0a8; }
+    #send-btn svg { width: 18px; height: 18px; }
+    #send-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+    /* DASHBOARD */
+    #dashboard-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--black); }
+    #dashboard-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    #dashboard-scroll {
+      flex: 1; overflow-y: auto; padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+
+    /* CARDS */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+    }
+    .card-title {
+      font-family: var(--display); font-size: 12px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+    }
+    .card-body { padding: 14px 16px; }
+
+    /* CHART */
+    #chart-wrap { position: relative; height: 90px; }
+    .chart-current { font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--white); margin-bottom: 4px; }
+    .chart-meta { display: flex; gap: 16px; margin-bottom: 10px; }
+    .chart-meta span { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .chart-meta .pos { color: var(--green); }
+    .chart-meta .neg { color: var(--red); }
+    .chart-labels { display: flex; justify-content: space-between; margin-top: 5px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+    /* PORTFOLIO */
+    #portfolio-section .wallet-empty { text-align: center; padding: 24px 0; color: var(--muted); font-size: 13px; }
+    #portfolio-section .wallet-empty .empty-icon { font-size: 28px; margin-bottom: 8px; }
+    #portfolio-items { display: flex; flex-direction: column; gap: 10px; }
+    .portfolio-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px; background: var(--panel);
+      border-radius: var(--radius); border: 1px solid var(--border);
+    }
+    .portfolio-row .token-info { display: flex; align-items: center; gap: 10px; }
+    .token-icon {
+      width: 32px; height: 32px; border-radius: 50%; background: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 10px; font-weight: 500;
+      color: var(--green); flex-shrink: 0;
+    }
+    .token-name { font-size: 14px; font-weight: 600; color: var(--white); }
+    .token-balance { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    .token-usd { text-align: right; }
+    .token-usd-val { font-size: 14px; font-weight: 600; color: var(--white); font-family: var(--mono); }
+    .token-change { font-family: var(--mono); font-size: 11px; }
+    .token-change.pos { color: var(--green); }
+    .token-change.neg { color: var(--red); }
+    .portfolio-total {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0 2px; border-top: 1px solid var(--border); margin-top: 6px;
+    }
+    .portfolio-total .label { font-size: 12px; color: var(--muted); }
+    .portfolio-total .value { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--white); }
+
+    /* PRICES */
+    .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .price-tile { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+    .pt-symbol { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+    .pt-price { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--white); margin: 3px 0 2px; }
+    .pt-change { font-family: var(--mono); font-size: 11px; }
+    .pt-change.pos { color: var(--green); }
+    .pt-change.neg { color: var(--red); }
+
+    /* PROTOCOLS */
+    .protocol-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .protocol-row:last-child { border-bottom: none; }
+    .protocol-info { display: flex; flex-direction: column; gap: 2px; }
+    .protocol-name { font-size: 13px; font-weight: 600; color: var(--white); }
+    .protocol-desc { font-size: 12px; color: var(--muted); }
+    .protocol-right { text-align: right; }
+    .protocol-apy { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--green); }
+    .protocol-tvl { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .risk-badge { display: inline-block; font-size: 10px; font-family: var(--mono); padding: 2px 7px; border-radius: 4px; margin-top: 3px; }
+    .risk-low { background: rgba(0,211,149,0.1); color: var(--green); border: 1px solid rgba(0,211,149,0.2); }
+    .risk-med { background: rgba(255,170,0,0.1); color: var(--amber); border: 1px solid rgba(255,170,0,0.2); }
+    .protocol-action { margin-top: 4px; font-size: 11px; color: var(--green); font-family: var(--mono); display: block; }
+    .protocol-action:hover { text-decoration: underline; }
+    .live-dot { font-size: 9px; color: var(--green); margin-left: 4px; }
+
+    /* BADGES */
+    .demo-badge {
+      font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 4px;
+      background: rgba(255,170,0,0.1); color: var(--amber); border: 1px solid rgba(255,170,0,0.2);
+    }
+    .defillama-badge {
+      font-family: var(--mono); font-size: 9px; padding: 2px 6px; border-radius: 3px;
+      background: rgba(0,211,149,0.08); color: var(--green); border: 1px solid rgba(0,211,149,0.15);
+    }
+
+    /* SKELETON */
+    .skeleton {
+      background: linear-gradient(90deg, var(--border) 25%, var(--surface) 50%, var(--border) 75%);
+      background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px; height: 14px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    /* FOOTER */
+    #footer-bar {
+      height: 30px; border-top: 1px solid var(--border); display: flex;
+      align-items: center; justify-content: space-between;
+      padding: 0 24px; background: var(--ink); flex-shrink: 0;
+    }
+    .foot-left { font-family: var(--mono); font-size: 10px; color: var(--muted); display: flex; align-items: center; gap: 14px; }
+    .foot-right { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+    .foot-sep { color: var(--border); }
+    #network-status { color: var(--green); }
+
+    /* MODAL */
+    #wallet-modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.78); z-index: 200;
+      align-items: center; justify-content: center;
+    }
+    #wallet-modal.active { display: flex; }
+    .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; width: 420px; padding: 28px; }
+    .modal-title { font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--white); margin-bottom: 6px; }
+    .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+    .modal-mm-btn {
+      width: 100%; padding: 10px; margin-bottom: 10px;
+      border: 1px solid #f6851b; border-radius: var(--radius);
+      font-size: 13px; font-weight: 600; color: #f6851b;
+      background: rgba(246,133,27,0.08); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: all var(--t);
+    }
+    .modal-mm-btn:hover { background: rgba(246,133,27,0.18); }
+    .modal-divider { text-align: center; color: var(--muted); font-size: 12px; margin: 10px 0; }
+    #wallet-history { margin-bottom: 12px; }
+    .history-label { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-bottom: 6px; }
+    .history-chip {
+      display: block; width: 100%; padding: 7px 10px; margin-bottom: 4px;
+      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+      font-family: var(--mono); font-size: 11px; color: var(--muted);
+      cursor: pointer; text-align: left; transition: all var(--t);
+    }
+    .history-chip:hover { border-color: var(--green); color: var(--green); }
+    .modal-label { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-bottom: 6px; display: block; }
+    .modal-input {
+      width: 100%; background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 14px; font-size: 13px;
+      color: var(--text); font-family: var(--mono); outline: none;
+      transition: border-color var(--t); margin-bottom: 14px;
+    }
+    .modal-input:focus { border-color: var(--green); }
+    .modal-actions { display: flex; gap: 10px; margin-bottom: 12px; }
+    .modal-cancel {
+      flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 13px; color: var(--muted); background: transparent; cursor: pointer; transition: all var(--t);
+    }
+    .modal-cancel:hover { border-color: var(--text); color: var(--text); }
+    .modal-confirm {
+      flex: 1; padding: 10px; background: var(--green); border: none;
+      border-radius: var(--radius); font-size: 13px; font-weight: 600;
+      color: var(--black); cursor: pointer; transition: background var(--t);
+    }
+    .modal-confirm:hover { background: #00f0a8; }
+    .demo-btn {
+      width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 13px; color: var(--text); background: var(--panel);
+      cursor: pointer; transition: all var(--t); text-align: center;
+    }
+    .demo-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+    /* MOBILE TABS */
+    #mobile-tabs { display: none; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--ink); }
+    .tab-bar { display: flex; }
+    .tab-btn {
+      flex: 1; padding: 12px; font-family: var(--display); font-size: 12px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+      border-bottom: 2px solid transparent; transition: all var(--t); text-align: center;
+    }
+    .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      #footer-bar { display: none; }
+      #mobile-tabs { display: block; }
+      #topbar { padding: 0 14px; height: 50px; }
+      .brand-name { font-size: 15px; }
+      .brand-tag { display: none; }
+      .btn-green, .btn-outline { padding: 6px 10px; font-size: 12px; }
+      .btn-mm { display: none; }
+      #wallet-display { max-width: 110px; font-size: 11px; }
+      #main { flex-direction: column; flex: 1; overflow: hidden; }
+      #chat-panel { width: 100%; border-right: none; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+      #chat-panel.tab-hidden { display: none; }
+      #dashboard-panel { flex: 1; overflow: hidden; display: none; }
+      #dashboard-panel.tab-visible { display: flex; flex-direction: column; }
+      #messages { padding: 14px; gap: 12px; }
+      #suggestions { padding: 0 14px 10px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      #suggestions::-webkit-scrollbar { display: none; }
+      .suggestion-chip { flex-shrink: 0; }
+      #chat-input-area { padding: 10px 14px; gap: 8px; }
+      #chat-input { font-size: 16px; padding: 10px 12px; height: 44px; }
+      #send-btn { width: 44px; height: 44px; flex-shrink: 0; }
+      #dashboard-scroll { padding: 12px 14px; gap: 12px; }
+      .modal-box { width: calc(100vw - 32px); padding: 20px; }
+      .price-grid { gap: 6px; }
+      .pt-price { font-size: 13px; }
+      .strategy-cards { max-width: 100%; }
+      .strategy-card { min-width: 130px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header id="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" stroke="#0a0a0a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <span class="brand-name">MantleMind</span>
+      <span class="brand-tag">AI CO-PILOT</span>
+    </div>
+    <div class="topbar-right">
+      <div id="wallet-display" style="display:none;" onclick="openWalletModal()"></div>
+      <button class="btn-mm" id="metamask-btn" onclick="connectMetaMask()" style="display:none;">
+        <svg width="14" height="13" viewBox="0 0 35 33" fill="none">
+          <path d="M32.96 1L19.4 10.75l2.47-5.84L32.96 1z" fill="#E17726" stroke="#E17726" stroke-width=".25"/>
+          <path d="M2.04 1l13.44 9.84-2.35-5.93L2.04 1z" fill="#E27625" stroke="#E27625" stroke-width=".25"/>
+        </svg>
+        MetaMask
+      </button>
+      <button class="btn-outline" id="demo-mode-btn" onclick="activateDemo()">Demo</button>
+      <button class="btn-green" id="connect-btn" onclick="openWalletModal()">Connect Wallet</button>
+    </div>
+  </header>
+
+  <div id="mobile-tabs">
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-chat" onclick="switchTab('chat')">AI Chat</button>
+      <button class="tab-btn" id="tab-markets" onclick="switchTab('markets')">Portfolio &amp; Markets</button>
+    </div>
+  </div>
+
+  <div id="main">
+
+    <!-- CHAT PANEL -->
+    <section id="chat-panel">
+      <div id="chat-header">
+        <span class="panel-title">AI Chat</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">Groq · llama-3.3-70b</span>
+          <div class="status-dot"></div>
+        </div>
+      </div>
+
+      <div id="messages">
+        <div class="msg assistant">
+          <span class="msg-role">MantleMind</span>
+          <div class="msg-bubble">
+            <strong>Welcome to MantleMind.</strong> Your AI DeFi co-pilot on Mantle Network.<br><br>
+            Connect your wallet for a live portfolio read, then ask me anything — yield strategies, protocol comparisons, risk analysis, or what to do with your holdings right now.
+          </div>
+        </div>
+      </div>
+
+      <div id="suggestions">
+        <button class="suggestion-chip" onclick="sendSuggestion(this)">Best yield right now?</button>
+        <button class="suggestion-chip" onclick="sendSuggestion(this)">mETH vs cmETH?</button>
+        <button class="suggestion-chip" onclick="sendSuggestion(this)">Low-risk BTC yield?</button>
+        <button class="suggestion-chip" onclick="sendSuggestion(this)">What is MI4?</button>
+        <button class="suggestion-chip" onclick="sendSuggestion(this)">Explain FBTC Vault</button>
+      </div>
+
+      <div id="chat-input-area">
+        <textarea id="chat-input" placeholder="Ask anything about Mantle DeFi…" onkeydown="handleKey(event)"></textarea>
+        <button id="send-btn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2" fill="#0a0a0a"></polygon>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- DASHBOARD PANEL -->
+    <section id="dashboard-panel">
+      <div id="dashboard-header">
+        <span class="panel-title">Portfolio &amp; Markets</span>
+        <span id="demo-badge" class="demo-badge" style="display:none;">DEMO</span>
+      </div>
+
+      <div id="dashboard-scroll">
+
+        <!-- MNT Chart -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">MNT · 7-Day</span>
+            <span id="chart-range" style="font-family:var(--mono);font-size:10px;color:var(--muted);">Loading…</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-current" id="chart-price">—</div>
+            <div class="chart-meta">
+              <span id="chart-change" class="pos">—</span>
+              <span id="chart-high">H: —</span>
+              <span id="chart-low">L: —</span>
+            </div>
+            <div id="chart-wrap"><canvas id="mnt-chart"></canvas></div>
+            <div class="chart-labels" id="chart-labels"></div>
+          </div>
+        </div>
+
+        <!-- Portfolio -->
+        <div class="card" id="portfolio-section">
+          <div class="card-header">
+            <span class="card-title">Portfolio</span>
+            <span id="portfolio-status" style="font-family:var(--mono);font-size:10px;color:var(--muted);">No wallet connected</span>
+          </div>
+          <div class="card-body">
+            <div class="wallet-empty" id="portfolio-empty">
+              <div class="empty-icon">◎</div>
+              <div>Connect wallet or use Demo Mode to view your portfolio.</div>
+            </div>
+            <div id="portfolio-items" style="display:none;"></div>
+            <div class="portfolio-total" id="portfolio-total" style="display:none;">
+              <span class="label">Total Value</span>
+              <span class="value" id="total-value">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prices -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Market Prices</span>
+            <span id="prices-updated" style="font-family:var(--mono);font-size:10px;color:var(--muted);">Loading…</span>
+          </div>
+          <div class="card-body">
+            <div class="price-grid" id="price-grid">
+              <div class="skeleton" style="height:60px;"></div>
+              <div class="skeleton" style="height:60px;"></div>
+              <div class="skeleton" style="height:60px;"></div>
+              <div class="skeleton" style="height:60px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Protocols -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Live Protocols</span>
+            <span id="defillama-status" class="defillama-badge">DefiLlama</span>
+          </div>
+          <div class="card-body" id="protocol-list">
+            <div class="skeleton" style="height:56px;margin-bottom:8px;"></div>
+            <div class="skeleton" style="height:56px;margin-bottom:8px;"></div>
+            <div class="skeleton" style="height:56px;"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </div>
+
+  <footer id="footer-bar">
+    <div class="foot-left">
+      <span id="network-status">● Mantle Network</span>
+      <span class="foot-sep">|</span>
+      <span>Chain ID 5000</span>
+      <span class="foot-sep">|</span>
+      <span>rpc.mantle.xyz</span>
+    </div>
+    <div class="foot-right">Built by @Davexinoh · Scribble x Mantle 2026</div>
+  </footer>
+
+</div>
+
+<!-- WALLET MODAL -->
+<div id="wallet-modal">
+  <div class="modal-box">
+    <div class="modal-title">Connect Wallet</div>
+    <div class="modal-sub">Connect MetaMask or paste any Mantle wallet address.</div>
+
+    <button class="modal-mm-btn" id="modal-mm-btn" onclick="connectMetaMask()">
+      <svg width="16" height="15" viewBox="0 0 35 33" fill="none">
+        <path d="M32.96 1L19.4 10.75l2.47-5.84L32.96 1z" fill="#E17726"/>
+        <path d="M2.04 1l13.44 9.84-2.35-5.93L2.04 1z" fill="#E27625"/>
+        <path d="M28.3 23.28l-3.6 5.5 7.7 2.12 2.21-7.5-6.31-.12z" fill="#E27625"/>
+        <path d="M.37 23.4l2.2 7.5 7.69-2.12-3.59-5.5-6.3.12z" fill="#E27625"/>
+        <path d="M9.87 14.37l-2.14 3.24 7.6.34-.25-8.17-5.21 4.59zM25.13 14.37l-5.28-4.7-.17 8.28 7.59-.34-2.14-3.24z" fill="#E27625"/>
+        <path d="M10.26 28.78l4.57-2.22-3.94-3.07-.63 5.29zM20.17 26.56l4.57 2.22-.62-5.29-3.95 3.07z" fill="#E27625"/>
+      </svg>
+      Connect MetaMask
+    </button>
+
+    <div id="wallet-history" style="display:none;">
+      <div class="history-label">RECENT WALLETS</div>
+      <div id="history-chips"></div>
+      <div class="modal-divider">— or enter address —</div>
+    </div>
+
+    <label class="modal-label">Wallet Address</label>
+    <input class="modal-input" type="text" id="wallet-input" placeholder="0x…" />
+
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeWalletModal()">Cancel</button>
+      <button class="modal-confirm" onclick="connectWallet()">Load Portfolio</button>
+    </div>
+    <div class="modal-divider">— or —</div>
+    <button class="demo-btn" onclick="closeWalletModal(); activateDemo();">Use Demo Mode (no wallet needed)</button>
+  </div>
+</div>
+
+<script>
+  // ─── CONFIG ────────────────────────────────────────────────────
+  const BACKEND_URL = 'https://mantlemind.onrender.com';
+  const MANTLE_RPC  = 'https://rpc.mantle.xyz';
+
+  // ─── TOKEN CONFIG ──────────────────────────────────────────────
+  const TOKENS = {
+    mETH: { address: '0xcDA86A272531e8640cD7F1a92c01839911B90bb0', decimals: 18 },
+    USDT: { address: '0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE', decimals: 6  },
+    FBTC: { address: '0xC96dE26018A54D51c097160568752c4E3BD6C364', decimals: 8  },
+  };
+
+  // ─── PROTOCOL BASE DATA ────────────────────────────────────────
+  const PROTOCOL_BASE = [
+    { name: 'mETH Protocol',   desc: 'Liquid ETH staking',           apy: 5.0,  tvl: '$1.2B',  risk: 'low', url: 'https://www.methprotocol.xyz', llama: 'meth-protocol'  },
+    { name: 'cmETH Restaking', desc: 'EigenLayer + Symbiotic',       apy: 5.8,  tvl: '$680M',  risk: 'low', url: 'https://www.methprotocol.xyz', llama: 'cmeth'          },
+    { name: 'FBTC Vault',      desc: 'Bitcoin yield, no lockup',     apy: 9.7,  tvl: '$340M',  risk: 'low', url: 'https://www.fxn.xyz',          llama: 'fbtc'           },
+    { name: 'INIT Capital',    desc: 'Lending with mETH collateral', apy: 7.1,  tvl: '$220M',  risk: 'low', url: 'https://app.init.capital',     llama: 'init-capital'   },
+    { name: 'Merchant Moe',    desc: 'mETH/USDT0 DEX pool',         apy: 14.2, tvl: '$180M',  risk: 'med', url: 'https://merchantmoe.com',      llama: 'merchant-moe'   },
+    { name: 'Agni Finance',    desc: 'AMM DEX liquidity',            apy: 11.3, tvl: '$95M',   risk: 'med', url: 'https://agni.finance',         llama: 'agni-finance'   },
+  ];
+
+  const DEMO_PORTFOLIO = [
+    { symbol: 'MNT',  balance: '2,450.00' },
+    { symbol: 'mETH', balance: '1.2400'   },
+    { symbol: 'USDT', balance: '830.00'   },
+    { symbol: 'FBTC', balance: '0.0082'   },
+  ];
+
+  // ─── STATE ─────────────────────────────────────────────────────
+  let walletAddress = null;
+  let isDemo        = false;
+  let prices        = {};
+  let protocols     = [];
+  let chatHistory   = [];
+  let isTyping      = false;
+  let mntChart      = null;
+  let lastReply     = '';
+
+  // ─── INIT ──────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    checkMetaMask();
+    fetchPrices();
+    fetchDefiLlama();
+    fetchMNTChart();
+    setInterval(fetchPrices, 60000);
+    setInterval(fetchDefiLlama, 300000);
+
+    const inp = document.getElementById('chat-input');
+    inp.addEventListener('input', () => {
+      inp.style.height = '44px';
+      inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
+    });
+  });
+
+  // ─── MOBILE TABS ───────────────────────────────────────────────
+  function switchTab(tab) {
+    const chatPanel  = document.getElementById('chat-panel');
+    const dashPanel  = document.getElementById('dashboard-panel');
+    const tabChat    = document.getElementById('tab-chat');
+    const tabMarkets = document.getElementById('tab-markets');
+    if (tab === 'chat') {
+      chatPanel.classList.remove('tab-hidden');
+      dashPanel.classList.remove('tab-visible');
+      tabChat.classList.add('active');
+      tabMarkets.classList.remove('active');
+      setTimeout(() => document.getElementById('chat-input').focus(), 150);
+    } else {
+      chatPanel.classList.add('tab-hidden');
+      dashPanel.classList.add('tab-visible');
+      tabMarkets.classList.add('active');
+      tabChat.classList.remove('active');
+    }
+  }
+
+  // ─── METAMASK ──────────────────────────────────────────────────
+  function checkMetaMask() {
+    if (window.ethereum) {
+      document.getElementById('metamask-btn').style.display = 'flex';
+    }
+  }
+
+  async function connectMetaMask() {
+    if (!window.ethereum) {
+      alert('MetaMask not detected. Install the MetaMask extension.');
+      return;
+    }
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (!accounts.length) return;
+      const addr = accounts[0];
+      try {
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1388' }] });
+      } catch (sw) {
+        if (sw.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{ chainId: '0x1388', chainName: 'Mantle', nativeCurrency: { name: 'MNT', symbol: 'MNT', decimals: 18 }, rpcUrls: ['https://rpc.mantle.xyz'], blockExplorerUrls: ['https://explorer.mantle.xyz'] }]
+          });
+        }
+      }
+      walletAddress = addr;
+      isDemo = false;
+      closeWalletModal();
+      saveWalletHistory(addr);
+      updateWalletUI(addr);
+      await loadRealPortfolio(addr);
+    } catch(err) { console.error('MetaMask:', err); }
+  }
+
+  // ─── WALLET MODAL ──────────────────────────────────────────────
+  function openWalletModal() {
+    loadWalletHistory();
+    document.getElementById('wallet-modal').classList.add('active');
+  }
+  function closeWalletModal() { document.getElementById('wallet-modal').classList.remove('active'); }
+  document.getElementById('wallet-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('wallet-modal')) closeWalletModal();
+  });
+
+  async function connectWallet() {
+    const raw = document.getElementById('wallet-input').value.trim();
+    if (!raw.match(/^0x[0-9a-fA-F]{40}$/)) {
+      document.getElementById('wallet-input').style.borderColor = 'var(--red)';
+      setTimeout(() => document.getElementById('wallet-input').style.borderColor = '', 1200);
+      return;
+    }
+    walletAddress = raw; isDemo = false;
+    closeWalletModal();
+    saveWalletHistory(raw);
+    updateWalletUI(raw);
+    await loadRealPortfolio(raw);
+  }
+
+  function updateWalletUI(addr) {
+    const wd = document.getElementById('wallet-display');
+    wd.textContent = addr.length > 18 ? addr.slice(0,8) + '…' + addr.slice(-6) : addr;
+    wd.style.display = '';
+    document.getElementById('connect-btn').style.display = 'none';
+    document.getElementById('demo-mode-btn').style.display = 'none';
+    document.getElementById('metamask-btn').style.display = 'none';
+  }
+
+  // ─── WALLET HISTORY ────────────────────────────────────────────
+  function saveWalletHistory(addr) {
+    try {
+      let h = JSON.parse(localStorage.getItem('mm_wallets') || '[]');
+      h = [addr, ...h.filter(a => a !== addr)].slice(0, 3);
+      localStorage.setItem('mm_wallets', JSON.stringify(h));
+    } catch(_) {}
+  }
+
+  function loadWalletHistory() {
+    try {
+      const h    = JSON.parse(localStorage.getItem('mm_wallets') || '[]');
+      const wrap = document.getElementById('wallet-history');
+      const el   = document.getElementById('history-chips');
+      if (!h.length) { wrap.style.display = 'none'; return; }
+      wrap.style.display = '';
+      el.innerHTML = h.map(a =>
+        `<button class="history-chip" onclick="document.getElementById('wallet-input').value='${a}'">${a.slice(0,10)}…${a.slice(-8)}</button>`
+      ).join('');
+    } catch(_) {}
+  }
+
+  // ─── DEMO MODE ─────────────────────────────────────────────────
+  function activateDemo() {
+    isDemo = true; walletAddress = '0xDEMO';
+    document.getElementById('demo-badge').style.display = '';
+    updateWalletUI('Demo wallet');
+    renderDemoPortfolio();
+    appendMessage('assistant', '📊 **Demo mode active.** I\'ve loaded a sample Mantle portfolio. Ask me about yields, strategies, or any protocol on Mantle.');
+  }
+
+  // ─── PORTFOLIO ─────────────────────────────────────────────────
+  async function loadRealPortfolio(addr) {
+    document.getElementById('portfolio-status').textContent = 'Loading…';
+    document.getElementById('portfolio-empty').style.display = 'none';
+    document.getElementById('portfolio-items').style.display = '';
+    document.getElementById('portfolio-items').innerHTML = '<div class="skeleton" style="height:48px;margin-bottom:8px;"></div>'.repeat(4);
+    try {
+      const [mnt, meth, usdt, fbtc] = await Promise.all([
+        fetchNativeBalance(addr),
+        fetchERC20Balance(addr, TOKENS.mETH),
+        fetchERC20Balance(addr, TOKENS.USDT),
+        fetchERC20Balance(addr, TOKENS.FBTC),
+      ]);
+      const items = [
+        { symbol: 'MNT',  balance: mnt  },
+        { symbol: 'mETH', balance: meth },
+        { symbol: 'USDT', balance: usdt },
+        { symbol: 'FBTC', balance: fbtc },
+      ].filter(t => parseFloat(t.balance) > 0);
+      renderPortfolio(items);
+      document.getElementById('portfolio-status').textContent = addr.slice(0,6) + '…' + addr.slice(-4);
+    } catch(_) {
+      document.getElementById('portfolio-items').innerHTML = '';
+      document.getElementById('portfolio-empty').style.display = '';
+      document.getElementById('portfolio-empty').querySelector('.empty-icon').textContent = '⚠';
+      document.getElementById('portfolio-empty').querySelector('div:last-child').textContent = 'Could not load portfolio. Check the address.';
+      document.getElementById('portfolio-status').textContent = 'Error';
+    }
+  }
+
+  async function fetchNativeBalance(addr) {
+    const res = await fetch(MANTLE_RPC, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({jsonrpc:'2.0',method:'eth_getBalance',params:[addr,'latest'],id:1})
+    });
+    const { result } = await res.json();
+    return (parseInt(result, 16) / 1e18).toFixed(4);
+  }
+
+  async function fetchERC20Balance(addr, token) {
+    const data = '0x70a08231' + addr.slice(2).padStart(64, '0');
+    const res  = await fetch(MANTLE_RPC, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({jsonrpc:'2.0',method:'eth_call',params:[{to:token.address,data},'latest'],id:1})
+    });
+    const { result } = await res.json();
+    if (!result || result === '0x') return '0.0000';
+    return (parseInt(result, 16) / Math.pow(10, token.decimals)).toFixed(4);
+  }
+
+  function renderDemoPortfolio() {
+    renderPortfolio(DEMO_PORTFOLIO);
+    document.getElementById('portfolio-status').textContent = 'Demo · sample data';
+  }
+
+  function renderPortfolio(items) {
+    const container = document.getElementById('portfolio-items');
+    container.style.display = '';
+    document.getElementById('portfolio-empty').style.display = 'none';
+    let totalUSD = 0;
+    container.innerHTML = items.map(t => {
+      const p   = prices[t.symbol] || { usd: 0, change: 0 };
+      const bal = parseFloat(String(t.balance).replace(/,/g,''));
+      const usd = bal * (p.usd || 0);
+      totalUSD += usd;
+      const c = p.change || 0;
+      return `<div class="portfolio-row">
+        <div class="token-info">
+          <div class="token-icon">${t.symbol.slice(0,3)}</div>
+          <div><div class="token-name">${t.symbol}</div><div class="token-balance">${t.balance}</div></div>
+        </div>
+        <div class="token-usd">
+          <div class="token-usd-val">${usd > 0 ? '$'+usd.toLocaleString('en-US',{maximumFractionDigits:2}) : '—'}</div>
+          <div class="token-change ${c>=0?'pos':'neg'}">${p.usd > 0 ? (c>=0?'+':'')+c.toFixed(2)+'%' : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+    document.getElementById('portfolio-total').style.display = '';
+    document.getElementById('total-value').textContent = totalUSD > 0
+      ? '$' + totalUSD.toLocaleString('en-US', {maximumFractionDigits:2}) : '—';
+  }
+
+  // ─── PRICES ────────────────────────────────────────────────────
+  async function fetchPrices() {
+    try {
+      const ids = 'mantle,mantle-staked-ether,tether,ignition-fbtc,ethereum';
+      const res  = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+      const d    = await res.json();
+      prices = {
+        MNT:  { usd: d['mantle']?.usd||0,              change: d['mantle']?.usd_24h_change||0 },
+        mETH: { usd: d['mantle-staked-ether']?.usd||0, change: d['mantle-staked-ether']?.usd_24h_change||0 },
+        USDT: { usd: d['tether']?.usd||1,              change: d['tether']?.usd_24h_change||0 },
+        FBTC: { usd: d['ignition-fbtc']?.usd||0,       change: d['ignition-fbtc']?.usd_24h_change||0 },
+        ETH:  { usd: d['ethereum']?.usd||0,            change: d['ethereum']?.usd_24h_change||0 },
+      };
+      renderPriceGrid();
+      document.getElementById('prices-updated').textContent =
+        'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      if (isDemo) renderDemoPortfolio();
+    } catch(_) { document.getElementById('prices-updated').textContent = 'Error'; }
+  }
+
+  function renderPriceGrid() {
+    document.getElementById('price-grid').innerHTML =
+      [['MNT','MNT'],['mETH','mETH'],['ETH','ETH'],['FBTC','FBTC']].map(([l,k]) => {
+        const p = prices[k]||{usd:0,change:0};
+        const cls = p.change>=0?'pos':'neg';
+        const sign = p.change>=0?'▲':'▼';
+        return `<div class="price-tile">
+          <div class="pt-symbol">${l}</div>
+          <div class="pt-price">${p.usd>0?'$'+p.usd.toLocaleString('en-US',{maximumFractionDigits:p.usd<1?6:2}):'—'}</div>
+          <div class="pt-change ${cls}">${p.change!==0?sign+' '+Math.abs(p.change).toFixed(2)+'%':''}</div>
+        </div>`;
+      }).join('');
+  }
+
+  // ─── MNT CHART ─────────────────────────────────────────────────
+  async function fetchMNTChart() {
+    try {
+      const res  = await fetch('https://api.coingecko.com/api/v3/coins/mantle/market_chart?vs_currency=usd&days=7');
+      const data = await res.json();
+      const pts  = data.prices || [];
+      if (!pts.length) return;
+
+      const step = Math.max(1, Math.floor(pts.length / 16));
+      const labels = [], values = [];
+      for (let i = 0; i < pts.length; i += step) {
+        labels.push(new Date(pts[i][0]).toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+        values.push(pts[i][1]);
+      }
+
+      const current = pts[pts.length-1][1];
+      const first   = pts[0][1];
+      const high    = Math.max(...values);
+      const low     = Math.min(...values);
+      const chg     = (current - first) / first * 100;
+
+      document.getElementById('chart-price').textContent = '$' + current.toFixed(4);
+      const ce = document.getElementById('chart-change');
+      ce.textContent = (chg>=0?'▲ +':'▼ ') + chg.toFixed(2) + '% (7d)';
+      ce.className = chg>=0?'pos':'neg';
+      document.getElementById('chart-high').textContent = 'H: $' + high.toFixed(4);
+      document.getElementById('chart-low').textContent  = 'L: $' + low.toFixed(4);
+      document.getElementById('chart-range').textContent = labels[0] + ' – ' + labels[labels.length-1];
+      document.getElementById('chart-labels').innerHTML =
+        [labels[0], labels[Math.floor(labels.length/2)], labels[labels.length-1]]
+          .map(l => `<span>${l}</span>`).join('');
+
+      const ctx  = document.getElementById('mnt-chart').getContext('2d');
+      const grad = ctx.createLinearGradient(0,0,0,90);
+      grad.addColorStop(0,'rgba(0,211,149,0.28)');
+      grad.addColorStop(1,'rgba(0,211,149,0)');
+      if (mntChart) mntChart.destroy();
+      mntChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [{ data: values, borderColor: '#00d395', borderWidth: 1.5, pointRadius: 0, fill: true, backgroundColor: grad, tension: 0.4 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: { label: c => '$' + c.parsed.y.toFixed(5) },
+              backgroundColor: '#1c1c1c', borderColor: '#2a2a2a', borderWidth: 1,
+              titleColor: '#888', bodyColor: '#f0f0f0',
+            }
+          },
+          scales: { x: { display: false }, y: { display: false } },
+        }
+      });
+    } catch(_) { document.getElementById('chart-price').textContent = 'Unavailable'; }
+  }
+
+  // ─── DEFILLAMA ─────────────────────────────────────────────────
+  async function fetchDefiLlama() {
+    document.getElementById('defillama-status').textContent = 'Loading…';
+    try {
+      const res  = await fetch('https://yields.llama.fi/pools');
+      const data = await res.json();
+      const mantlePools = (data.data||[]).filter(p =>
+        p.chain && p.chain.toLowerCase() === 'mantle' && p.apy != null
+      );
+      protocols = PROTOCOL_BASE.map(proto => {
+        const match = mantlePools.find(p => p.project && p.project.toLowerCase().includes(proto.llama));
+        if (match) {
+          return {
+            ...proto,
+            apy: match.apy.toFixed(1),
+            tvl: match.tvlUsd > 1e9
+              ? '$' + (match.tvlUsd/1e9).toFixed(1) + 'B'
+              : '$' + (match.tvlUsd/1e6).toFixed(0) + 'M',
+            live: true,
+          };
+        }
+        return { ...proto, apy: (proto.apy + parseFloat((Math.random()*0.1-0.05).toFixed(2))).toFixed(1), live: false };
+      });
+      renderProtocols();
+      const liveCount = protocols.filter(p => p.live).length;
+      document.getElementById('defillama-status').textContent = `DefiLlama · ${liveCount} live`;
+      document.getElementById('defillama-status').style.color = 'var(--green)';
+    } catch(_) {
+      protocols = PROTOCOL_BASE.map(p => ({
+        ...p, apy: (p.apy + parseFloat((Math.random()*0.1-0.05).toFixed(2))).toFixed(1), live: false
+      }));
+      renderProtocols();
+      document.getElementById('defillama-status').textContent = 'Fallback data';
+    }
+  }
+
+  function renderProtocols() {
+    document.getElementById('protocol-list').innerHTML = protocols.map(p => {
+      const riskCls = p.risk==='low'?'risk-low':'risk-med';
+      const riskLbl = p.risk==='low'?'LOW RISK':'MED RISK';
+      const liveDot = p.live ? '<span class="live-dot">● LIVE</span>' : '';
+      return `<div class="protocol-row">
+        <div class="protocol-info">
+          <div class="protocol-name">${p.name}</div>
+          <div class="protocol-desc">${p.desc}</div>
+          <span class="risk-badge ${riskCls}">${riskLbl}</span>
+        </div>
+        <div class="protocol-right">
+          <div class="protocol-apy">${p.apy}% APY${liveDot}</div>
+          <div class="protocol-tvl">TVL ${p.tvl}</div>
+          <a class="protocol-action" href="${p.url}" target="_blank" rel="noopener">Enter →</a>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ─── CHAT ──────────────────────────────────────────────────────
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+  function sendSuggestion(btn) {
+    document.getElementById('chat-input').value = btn.textContent;
+    sendMessage();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const text  = input.value.trim();
+    if (!text || isTyping) return;
+    input.value = ''; input.style.height = '44px';
+    appendMessage('user', text);
+    chatHistory.push({ role: 'user', content: text });
+    isTyping = true;
+    document.getElementById('send-btn').disabled = true;
+    const typingEl = showTyping();
+    try {
+      const portfolioCtx = buildPortfolioContext();
+      const res  = await fetch(`${BACKEND_URL}/chat`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ message: text, history: chatHistory.slice(-10), portfolio: portfolioCtx, prices })
+      });
+      const data  = await res.json();
+      typingEl.remove();
+      const reply = data.reply || 'No response from server.';
+      lastReply = reply;
+      appendAIMessage(reply);
+      chatHistory.push({ role: 'assistant', content: reply });
+    } catch(_) {
+      typingEl.remove();
+      appendMessage('assistant', '⚠ Backend unreachable. Ensure the Render service is live and BACKEND_URL is set.');
+    }
+    isTyping = false;
+    document.getElementById('send-btn').disabled = false;
+  }
+
+  function buildPortfolioContext() {
+    if (!walletAddress) return null;
+    const rows = Array.from(document.querySelectorAll('.portfolio-row')).map(r => ({
+      token: r.querySelector('.token-name')?.textContent,
+      balance: r.querySelector('.token-balance')?.textContent,
+      usd: r.querySelector('.token-usd-val')?.textContent,
+    }));
+    return { address: walletAddress, demo: isDemo, holdings: rows, totalValue: document.getElementById('total-value')?.textContent };
+  }
+
+  function appendMessage(role, text) {
+    const msgs = document.getElementById('messages');
+    const div  = document.createElement('div');
+    div.className = `msg ${role}`;
+    const formatted = text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+    div.innerHTML = `<span class="msg-role">${role==='user'?'You':'MantleMind'}</span><div class="msg-bubble">${formatted}</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function appendAIMessage(text) {
+    const msgs = document.getElementById('messages');
+    const div  = document.createElement('div');
+    div.className = 'msg assistant';
+    const formatted = text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+    div.innerHTML = `<span class="msg-role">MantleMind</span><div class="msg-bubble">${formatted}</div>`;
+
+    // Strategy cards — detect protocol mentions
+    const mentioned = protocols.filter(p => text.toLowerCase().includes(p.name.toLowerCase()));
+    if (mentioned.length > 0) {
+      const cards = document.createElement('div');
+      cards.className = 'strategy-cards';
+      cards.innerHTML = mentioned.map(p =>
+        `<div class="strategy-card">
+          <div class="sc-name">${p.name}</div>
+          <div class="sc-apy">${p.apy}% APY</div>
+          <div class="sc-risk">${p.risk==='low'?'● LOW RISK':'◈ MED RISK'} · ${p.tvl}</div>
+          <a class="sc-action" href="${p.url}" target="_blank" rel="noopener">Enter Protocol →</a>
+        </div>`
+      ).join('');
+      div.appendChild(cards);
+    }
+
+    // Share button
+    const actions = document.createElement('div');
+    actions.className = 'msg-actions';
+    actions.innerHTML = `<button class="share-btn" onclick="shareToX()">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      Share on X
+    </button>`;
+    div.appendChild(actions);
+
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function shareToX() {
+    const portfolioLine = isDemo ? '\n[Demo portfolio]'
+      : walletAddress ? `\nPortfolio: ${document.getElementById('total-value')?.textContent||''}` : '';
+    const topProto = protocols.find(p => lastReply.toLowerCase().includes(p.name.toLowerCase()));
+    const protoLine = topProto ? `\nTop pick: ${topProto.name} @ ${topProto.apy}% APY` : '';
+    const tweet = `Just got my Mantle DeFi strategy from @MantleMind 🧠${portfolioLine}${protoLine}\n\nYour AI co-pilot on Mantle 👉 https://davexinoh.github.io/MantleMind\n\n#Mantle #DeFi #WhenAIMeetsMantle`;
+    window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(tweet), '_blank');
+  }
+
+  function showTyping() {
+    const msgs = document.getElementById('messages');
+    const div  = document.createElement('div');
+    div.className = 'msg assistant';
+    div.innerHTML = `<span class="msg-role">MantleMind</span><div class="msg-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    return div;
+  }
+</script>
+</body>
+</html>
